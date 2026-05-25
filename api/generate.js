@@ -42,7 +42,8 @@ Rules:
       }
     );
     const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '생성 실패';
+    if (data.error) return res.status(200).json({ text: `오류: ${data.error.message}` });
+const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '생성 실패';
     res.status(200).json({ text });
   } catch (e) {
     res.status(500).json({ error: '오류가 발생했어요.' });
