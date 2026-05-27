@@ -63,6 +63,7 @@ button.go:disabled{opacity:0.5}
 <div id="res"></div>
 <script>
 let mf=null,gf=null,md="image";
+const BASE="/api/proxy?path=";
 function sm(m,b){md=m;document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));b.classList.add("on")}
 function up(i,t){
   const f=i.files[0];if(!f)return;
@@ -91,8 +92,8 @@ function compress(file){
     img.src=url
   })
 }
-async function apiCall(key,body){
-  const r=await fetch("https://api.piapi.ai/api/v1/task",{method:"POST",headers:{"X-API-Key":key,"Content-Type":"application/json"},body:JSON.stringify(body)});
+async function apiCall(key,path,body){
+  const r=await fetch(BASE+path,{method:"POST",headers:{"Content-Type":"application/json","X-API-Key":key},body:JSON.stringify(body)});
   const d=await r.json();
   if(d.code!==200)throw new Error(d.message||JSON.stringify(d));
   return d.data?.task_id
@@ -100,7 +101,7 @@ async function apiCall(key,body){
 async function poll(key,id){
   for(let i=0;i<60;i++){
     await new Promise(r=>setTimeout(r,5000));
-    const r=await fetch("https://api.piapi.ai/api/v1/task/"+id,{headers:{"X-API-Key":key}});
+    const r=await fetch(BASE+"task/"+id,{headers:{"X-API-Key":key}});
     const d=await r.json();
     const s=d.data?.status;
     if(s==="completed"){
@@ -137,14 +138,14 @@ async function go(){
     const gb=await compress(gf);
     ss("Sending to Kling AI...","i");
     addCard("Fitting Image","ic");
-    const tid=await apiCall(key,{model:"kling",task_type:"ai_try_on",input:{model_input:"data:image/jpeg;base64,"+mb,dress_input:"data:image/jpeg;base64,"+gb,batch_size:1}});
+    const tid=await apiCall(key,"task",{model:"kling",task_type:"ai_try_on",input:{model_input:"data:image/jpeg;base64,"+mb,dress_input:"data:image/jpeg;base64,"+gb,batch_size:1}});
     ss("Generating image... (30-60s)","i");
     const img=await poll(key,tid);
     updCard("ic",img);
     if(md==="video"||md==="both"){
       ss("Generating video...","i");
       addCard("Fitting Video","vc");
-      const vtid=await apiCall(key,{model:"kling",task_type:"video_generation",input:{image_url:img.url,prompt:"fashion model wearing outfit natural movement",duration:5,mode:"std"}});
+      const vtid=await apiCall(key,"task",{model:"kling",task_type:"video_generation",input:{image_url:img.url,prompt:"fashion model wearing outfit natural movement",duration:5,mode:"std"}});
       ss("Generating video... (1-2min)","i");
       const v=await poll(key,vtid);
       updCard("vc",v)
