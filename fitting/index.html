@@ -80,13 +80,13 @@ function compress(file){
     const img=new Image();
     const url=URL.createObjectURL(file);
     img.onload=()=>{
-      const MAX=800;
+      const MAX=512;
       let w=img.width,h=img.height;
       if(w>MAX||h>MAX){if(w>h){h=Math.round(h*MAX/w);w=MAX}else{w=Math.round(w*MAX/h);h=MAX}}
       const c=document.createElement("canvas");
       c.width=w;c.height=h;
       c.getContext("2d").drawImage(img,0,0,w,h);
-      res(c.toDataURL("image/jpeg",0.7).split(",")[1]);
+      res(c.toDataURL("image/jpeg",0.6).split(",")[1]);
       URL.revokeObjectURL(url)
     };
     img.src=url
@@ -110,7 +110,7 @@ async function poll(key,id){
       if(o?.works?.[0]?.video?.resource)return{t:"v",url:o.works[0].video.resource};
       throw new Error("No output")
     }
-    if(s==="failed")throw new Error("Failed")
+    if(s==="failed")throw new Error("Failed: "+(d.data?.error?.message||""))
   }
   throw new Error("Timeout")
 }
