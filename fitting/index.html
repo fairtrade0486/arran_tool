@@ -63,7 +63,6 @@ button.go:disabled{opacity:0.5}
 <div id="res"></div>
 <script>
 let mf=null,gf=null,md="image";
-const BASE="/api/proxy?path=";
 function sm(m,b){md=m;document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));b.classList.add("on")}
 function up(i,t){
   const f=i.files[0];if(!f)return;
@@ -80,20 +79,24 @@ function compress(file){
     const img=new Image();
     const url=URL.createObjectURL(file);
     img.onload=()=>{
-      const MAX=512;
+      const MAX=768;
       let w=img.width,h=img.height;
       if(w>MAX||h>MAX){if(w>h){h=Math.round(h*MAX/w);w=MAX}else{w=Math.round(w*MAX/h);h=MAX}}
       const c=document.createElement("canvas");
       c.width=w;c.height=h;
       c.getContext("2d").drawImage(img,0,0,w,h);
-      res(c.toDataURL("image/jpeg",0.6).split(",")[1]);
+      res(c.toDataURL("image/jpeg",0.7).split(",")[1]);
       URL.revokeObjectURL(url)
     };
     img.src=url
   })
 }
-async function apiCall(key,path,body){
-  const r=await fetch(BASE+path,{method:"POST",headers:{"Content-Type":"application/json","X-API-Key":key},body:JSON.stringify(body)});
+async function apiCall(key,body){
+  const r=await fetch("https://api.piapi.ai/api/v1/task",{
+    method:"POST",
+    headers:{"Content-Type":"application/json","x-api-key":key},
+    body:JSON.stringify(body)
+  });
   const d=await r.json();
   if(d.code!==200)throw new Error(d.message||JSON.stringify(d));
   return d.data?.task_id
@@ -101,16 +104,18 @@ async function apiCall(key,path,body){
 async function poll(key,id){
   for(let i=0;i<60;i++){
     await new Promise(r=>setTimeout(r,5000));
-    const r=await fetch(BASE+"task/"+id,{headers:{"X-API-Key":key}});
+    const r=await fetch("https://api.piapi.ai/api/v1/task/"+id,{
+      headers:{"x-api-key":key}
+    });
     const d=await r.json();
     const s=d.data?.status;
     if(s==="completed"){
       const o=d.data?.output;
       if(o?.image_url)return{t:"i",url:o.image_url};
       if(o?.works?.[0]?.video?.resource)return{t:"v",url:o.works[0].video.resource};
-      throw new Error("No output")
+      throw new Error("No output: "+JSON.stringify(o))
     }
-    if(s==="failed")throw new Error("Failed: "+(d.data?.error?.message||""))
+    if(s==="failed")throw new Error("Failed: "+(d.data?.error?.message||JSON.stringify(d.data)))
   }
   throw new Error("Timeout")
 }
@@ -138,14 +143,25 @@ async function go(){
     const gb=await compress(gf);
     ss("Sending to Kling AI...","i");
     addCard("Fitting Image","ic");
-    const tid=await apiCall(key,"task",{model:"kling",task_type:"ai_try_on",input:{model_input:"data:image/jpeg;base64,"+mb,dress_input:"data:image/jpeg;base64,"+gb,batch_size:1}});
+    const tid=await apiCall(key,{
+      model:"kling",
+      task_type:"dress",
+      input:{
+        model_input:"data:image/jpeg;base64,"+mb,
+        dress_input:"data:image/jpeg;base64,"+gb
+      }
+    });
     ss("Generating image... (30-60s)","i");
     const img=await poll(key,tid);
     updCard("ic",img);
     if(md==="video"||md==="both"){
       ss("Generating video...","i");
       addCard("Fitting Video","vc");
-      const vtid=await apiCall(key,"task",{model:"kling",task_type:"video_generation",input:{image_url:img.url,prompt:"fashion model wearing outfit natural movement",duration:5,mode:"std"}});
+      const vtid=await apiCall(key,{
+        model:"kling",
+        task_type:"video_generation",
+        input:{image_url:img.url,prompt:"fashion model wearing outfit natural movement",duration:5,mode:"std"}
+      });
       ss("Generating video... (1-2min)","i");
       const v=await poll(key,vtid);
       updCard("vc",v)
