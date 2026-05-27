@@ -1,1 +1,158 @@
-<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>AARAN Fitting</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:sans-serif;padding:16px;background:#fff}h1{color:#c9a96e;margin-bottom:16px}label{display:block;margin-bottom:12px}p{font-size:12px;color:#888;margin-bottom:4px}.box{border:2px dashed #ddd;padding:16px;text-align:center;cursor:pointer;border-radius:6px;font-size:14px;color:#888}.box.ok{border-color:#c9a96e;color:#333}img.prev{width:100%;max-
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>AARAN Fitting</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:sans-serif;padding:16px;background:#fff}
+h1{color:#c9a96e;margin-bottom:16px}
+label{display:block;margin-bottom:12px}
+p{font-size:12px;color:#888;margin-bottom:4px}
+.box{border:2px dashed #ddd;padding:16px;text-align:center;cursor:pointer;border-radius:6px;font-size:14px;color:#888}
+.box.ok{border-color:#c9a96e;color:#333}
+img.prev{width:100%;max-height:160px;object-fit:cover;margin-top:8px;border-radius:4px;display:none}
+input.key{width:100%;border:1px solid #ddd;padding:10px;border-radius:4px;font-size:14px;margin-bottom:12px}
+.tabs{display:flex;gap:6px;margin-bottom:12px}
+.tab{flex:1;padding:8px;border:1px solid #ddd;background:#fff;border-radius:4px;font-size:12px;cursor:pointer}
+.tab.on{border-color:#c9a96e;background:#fffbf5;color:#c9a96e}
+button.go{width:100%;padding:14px;background:#c9a96e;border:none;color:#fff;font-size:15px;font-weight:bold;border-radius:4px;cursor:pointer}
+button.go:disabled{opacity:0.5}
+.msg{margin-top:10px;padding:10px;border-radius:4px;font-size:13px;display:none}
+.msg.show{display:block}
+.msg.e{background:#fff0f0;color:#c00;border:1px solid #fcc}
+.msg.s{background:#f0fff4;color:#080;border:1px solid #cfc}
+.msg.i{background:#f5f5f5;color:#555;border:1px solid #ddd}
+.card{border:1px solid #ddd;border-radius:6px;margin-top:12px}
+.ch{padding:8px 12px;background:#f9f9f9;font-size:12px;color:#888;border-bottom:1px solid #ddd}
+.cb{padding:12px;min-height:120px;display:flex;align-items:center;justify-content:center}
+.cb img,.cb video{width:100%;border-radius:4px}
+.dots{display:flex;gap:5px}
+.dot{width:7px;height:7px;background:#c9a96e;border-radius:50%;animation:blink 1.4s infinite}
+.dot:nth-child(2){animation-delay:.2s}
+.dot:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:.3;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
+.dl{display:inline-block;margin-top:8px;padding:6px 12px;border:1px solid #ddd;border-radius:4px;font-size:12px;color:#888;text-decoration:none}
+</style>
+</head>
+<body>
+<h1>AARAN AI Fitting</h1>
+<label>
+<p>Your Photo</p>
+<div class="box" id="mb">Tap to upload photo</div>
+<input type="file" accept="image/*" style="display:none" onchange="up(this,'m')">
+<img class="prev" id="mp">
+</label>
+<label>
+<p>Garment Photo</p>
+<div class="box" id="gb">Tap to upload garment</div>
+<input type="file" accept="image/*" style="display:none" onchange="up(this,'g')">
+<img class="prev" id="gp">
+</label>
+<p style="margin-bottom:4px">PiAPI Key</p>
+<input class="key" type="password" id="k" placeholder="Paste PiAPI key...">
+<p style="margin-bottom:4px">Mode</p>
+<div class="tabs">
+<button class="tab on" onclick="sm('image',this)">Image</button>
+<button class="tab" onclick="sm('video',this)">Video</button>
+<button class="tab" onclick="sm('both',this)">Both</button>
+</div>
+<button class="go" id="gobtn" onclick="go()">Generate AI Fitting</button>
+<div class="msg" id="msg"></div>
+<div id="res"></div>
+<script>
+let mf=null,gf=null,md="image";
+function sm(m,b){md=m;document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));b.classList.add("on")}
+function up(i,t){
+  const f=i.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=e=>{
+    if(t==="m"){mf=f;document.getElementById("mp").src=e.target.result;document.getElementById("mp").style.display="block";document.getElementById("mb").className="box ok";document.getElementById("mb").textContent="Selected: "+f.name}
+    else{gf=f;document.getElementById("gp").src=e.target.result;document.getElementById("gp").style.display="block";document.getElementById("gb").className="box ok";document.getElementById("gb").textContent="Selected: "+f.name}
+  };
+  r.readAsDataURL(f)
+}
+function ss(msg,t){const e=document.getElementById("msg");e.textContent=msg;e.className="msg show "+t}
+function compress(file){
+  return new Promise(res=>{
+    const img=new Image();
+    const url=URL.createObjectURL(file);
+    img.onload=()=>{
+      const MAX=800;
+      let w=img.width,h=img.height;
+      if(w>MAX||h>MAX){if(w>h){h=Math.round(h*MAX/w);w=MAX}else{w=Math.round(w*MAX/h);h=MAX}}
+      const c=document.createElement("canvas");
+      c.width=w;c.height=h;
+      c.getContext("2d").drawImage(img,0,0,w,h);
+      res(c.toDataURL("image/jpeg",0.7).split(",")[1]);
+      URL.revokeObjectURL(url)
+    };
+    img.src=url
+  })
+}
+async function apiCall(key,body){
+  const r=await fetch("https://api.piapi.ai/api/v1/task",{method:"POST",headers:{"X-API-Key":key,"Content-Type":"application/json"},body:JSON.stringify(body)});
+  const d=await r.json();
+  if(d.code!==200)throw new Error(d.message||JSON.stringify(d));
+  return d.data?.task_id
+}
+async function poll(key,id){
+  for(let i=0;i<60;i++){
+    await new Promise(r=>setTimeout(r,5000));
+    const r=await fetch("https://api.piapi.ai/api/v1/task/"+id,{headers:{"X-API-Key":key}});
+    const d=await r.json();
+    const s=d.data?.status;
+    if(s==="completed"){
+      const o=d.data?.output;
+      if(o?.image_url)return{t:"i",url:o.image_url};
+      if(o?.works?.[0]?.video?.resource)return{t:"v",url:o.works[0].video.resource};
+      throw new Error("No output")
+    }
+    if(s==="failed")throw new Error("Failed")
+  }
+  throw new Error("Timeout")
+}
+function addCard(title,id){
+  const d=document.createElement("div");d.className="card";d.id=id;
+  d.innerHTML='<div class="ch">'+title+'</div><div class="cb"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>';
+  document.getElementById("res").appendChild(d)
+}
+function updCard(id,res){
+  const c=document.getElementById(id);if(!c)return;
+  c.querySelector(".cb").innerHTML=res.t==="v"
+    ?'<div style="width:100%"><video src="'+res.url+'" controls autoplay loop muted style="width:100%"></video><a class="dl" href="'+res.url+'" target="_blank">Download</a></div>'
+    :'<div style="width:100%"><img src="'+res.url+'" style="width:100%"><a class="dl" href="'+res.url+'" target="_blank">Download</a></div>'
+}
+async function go(){
+  const key=document.getElementById("k").value.trim();
+  if(!key)return ss("Enter PiAPI key","e");
+  if(!mf)return ss("Upload your photo","e");
+  if(!gf)return ss("Upload garment photo","e");
+  const btn=document.getElementById("gobtn");btn.disabled=true;
+  document.getElementById("res").innerHTML="";
+  try{
+    ss("Compressing images...","i");
+    const mb=await compress(mf);
+    const gb=await compress(gf);
+    ss("Sending to Kling AI...","i");
+    addCard("Fitting Image","ic");
+    const tid=await apiCall(key,{model:"kling",task_type:"ai_try_on",input:{model_input:"data:image/jpeg;base64,"+mb,dress_input:"data:image/jpeg;base64,"+gb,batch_size:1}});
+    ss("Generating image... (30-60s)","i");
+    const img=await poll(key,tid);
+    updCard("ic",img);
+    if(md==="video"||md==="both"){
+      ss("Generating video...","i");
+      addCard("Fitting Video","vc");
+      const vtid=await apiCall(key,{model:"kling",task_type:"video_generation",input:{image_url:img.url,prompt:"fashion model wearing outfit natural movement",duration:5,mode:"std"}});
+      ss("Generating video... (1-2min)","i");
+      const v=await poll(key,vtid);
+      updCard("vc",v)
+    }
+    ss("Done!","s")
+  }catch(e){ss(e.message,"e")}
+  finally{btn.disabled=false}
+}
+</script>
+</body>
+</html>
