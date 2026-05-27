@@ -1,1 +1,1 @@
-{"rewrites":[{"source":"/fitting","destination":"/fitting/index.html"}]}
+{"rewrites":[{"source":"/fitting","destination":"/fitting/index.html"},{"source":"/fitting/(.*)","destination":"/fitting/index.html"}]}
