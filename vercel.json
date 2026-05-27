@@ -1,1 +1,1 @@
-{"rewrites":[{"source":"/fitting","destination":"/fitting/index.html"},{"source":"/fitting/(.*)","destination":"/fitting/index.html"}]}
+{"version":2,"routes":[{"src":"/fitting","dest":"/fitting/index.html"},{"src":"/fitting/(.*)","dest":"/fitting/index.html"}]}
