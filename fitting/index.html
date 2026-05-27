@@ -121,7 +121,9 @@ async function poll(key,id){
     if(s==="completed"){
       const o=d.data?.output;
       if(o?.image_url)return{t:"i",url:o.image_url};
+      if(o?.works?.[0]?.resource)return{t:"i",url:o.works[0].resource};
       if(o?.works?.[0]?.video?.resource)return{t:"v",url:o.works[0].video.resource};
+      if(o?.works?.[0]?.cover?.resource)return{t:"i",url:o.works[0].cover.resource};
       throw new Error("No output: "+JSON.stringify(o))
     }
     if(s==="failed")throw new Error("Failed: "+(d.data?.error?.message||JSON.stringify(d.data)))
@@ -182,3 +184,4 @@ async function go(){
 </script>
 </body>
 </html>
+
