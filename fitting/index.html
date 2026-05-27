@@ -113,8 +113,8 @@ async function apiCall(key,body){
   return d.data?.task_id
 }
 async function poll(key,id){
-  for(let i=0;i<60;i++){
-    await new Promise(r=>setTimeout(r,5000));
+  for(let i=0;i<120;i++){
+    await new Promise(r=>setTimeout(r,3000));
     const r=await fetch("https://api.piapi.ai/api/v1/task/"+id,{headers:{"x-api-key":key}});
     const d=await r.json();
     const s=d.data?.status;
@@ -186,5 +186,6 @@ async function go(){
 </script>
 </body>
 </html>
+
 
 
